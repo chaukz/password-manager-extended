@@ -1,51 +1,55 @@
 import java.util.ArrayList;
 
 public class PasswordManager {
-    private ArrayList<PasswordEntry> entries;
+
+    // Cache entries in memory — DB is the source of truth on load,
+    // but in-memory list is what the UI reads to avoid stale re-queries.
+    private ArrayList<PasswordEntry> cache;
 
     public PasswordManager() {
-        entries = FileManager.loadPasswords();
+        cache = DatabaseManager.getAllEntries();
     }
 
     public boolean entryExists(String website) {
         return searchEntry(website) != null;
     }
 
-    // Returns true if added, false if duplicate
     public boolean addEntry(PasswordEntry entry) {
-        if (entryExists(entry.getWebsite())) {
-            return false;
-        }
-        entries.add(entry);
-        FileManager.savePasswords(entries);
-        return true;
+        String[] encrypted = EncryptionUtil.encrypt(entry.getPassword());
+        boolean inserted = DatabaseManager.insertEntry(
+                entry.getWebsite(), entry.getUsername(),
+                encrypted[0], encrypted[1]);
+        if (inserted)
+            cache.add(entry);
+        return inserted;
     }
 
     public void deleteEntry(String website) {
-        entries.removeIf(entry -> entry.getWebsite().equalsIgnoreCase(website));
-        FileManager.savePasswords(entries);
+        DatabaseManager.deleteEntry(website);
+        cache.removeIf(e -> e.getWebsite().equalsIgnoreCase(website));
     }
 
     public PasswordEntry searchEntry(String website) {
-        for (PasswordEntry entry : entries) {
-            if (entry.getWebsite().equalsIgnoreCase(website)) {
-                return entry;
-            }
-        }
+        for (PasswordEntry e : cache)
+            if (e.getWebsite().equalsIgnoreCase(website))
+                return e;
         return null;
     }
 
-    // Returns true if updated, false if not found
     public boolean updateEntry(String website, String newUsername, String newPassword) {
-        PasswordEntry entry = searchEntry(website);
-        if (entry == null) return false;
-        entry.setUsername(newUsername);
-        entry.setPassword(newPassword);
-        FileManager.savePasswords(entries);
-        return true;
+        String[] encrypted = EncryptionUtil.encrypt(newPassword);
+        boolean updated = DatabaseManager.updateEntry(website, newUsername, encrypted[0], encrypted[1]);
+        if (updated) {
+            PasswordEntry e = searchEntry(website);
+            if (e != null) {
+                e.setUsername(newUsername);
+                e.setPassword(newPassword);
+            }
+        }
+        return updated;
     }
 
     public ArrayList<PasswordEntry> listEntries() {
-        return entries;
+        return cache;
     }
 }
