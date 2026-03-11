@@ -1,32 +1,51 @@
-# 🔐 Java Password Manager
+# 🔐 Java Password Manager — Extended
 
-A secure, terminal-based password manager built in Java. Stores encrypted passwords locally with master password authentication and full CRUD functionality via a command-line interface.
+An extended version of [password-manager](https://github.com/chaukz/password-manager), upgraded from a terminal-based CLI tool to a full Swing GUI application with SQLite persistence and stronger AES/CBC encryption.
+
+---
+
+## ✨ What's New vs V1
+
+| Feature | V1 (Terminal) | V2 (This repo) |
+| --- | --- | --- |
+| Interface | Terminal CLI | Swing GUI with dark mode |
+| Storage | Flat `.dat` file | SQLite database |
+| Encryption | AES/ECB (no IV) | AES/CBC with random IV per entry |
+| Master password | Hardcoded hash in source | Set by user on first run, stored in DB |
+| First-run setup | None | Setup screen to create master password |
+| Duplicate prevention | ✅ | ✅ |
+| Search | Manual input | Live search bar |
 
 ---
 
 ## ✨ Features
 
-- 🔐 **Master Password Authentication** — SHA-256 hashed master password with 3-attempt lockout
-- 🔒 **AES Encryption** — Passwords encrypted before being written to disk
-- 💾 **Persistent Storage** — Entries saved to a local `.dat` file and loaded on every startup
-- ✅ **Duplicate Prevention** — Blocks adding the same website twice
-- ✏️ **Full CRUD** — Add, update, delete, and search entries
-- 🛡️ **Input Validation** — Handles bad input gracefully without crashing
+* 🔐 **Master Password Authentication** — SHA-256 hashed, stored in SQLite, 3-attempt lockout
+* 🔑 **First-Run Setup** — Set your own master password on launch, no hardcoded credentials
+* 🔒 **AES/CBC Encryption** — Each password encrypted with a unique random IV
+* 💾 **SQLite Persistence** — All entries stored in a local `vault.db` database
+* 🖥️ **Dark Mode GUI** — Clean Swing interface with indigo accent theme
+* 🔍 **Live Search** — Filter entries by website in real time
+* 👁️ **Show/Hide Passwords** — Toggle password visibility in the table
+* ✅ **Full CRUD** — Add, update, delete entries with confirmation dialogs
+* 🛡️ **Input Validation** — All fields validated before saving
 
 ---
 
 ## 🏗️ Project Structure
 
 ```
-password-manager/
+password-manager-extended/
 ├── src/
-│   ├── Main.java             # Entry point — terminal menu loop
-│   ├── PasswordManager.java  # Core logic — add, delete, search, update
+│   ├── Main.java             # Entry point — initializes DB then launches GUI
+│   ├── GUI.java              # Swing GUI — login, setup, dashboard, dialogs
+│   ├── PasswordManager.java  # Core logic — CRUD with in-memory cache
 │   ├── PasswordEntry.java    # Data model — website, username, password
-│   ├── FileManager.java      # File I/O — save/load with encryption
-│   └── EncryptionUtil.java   # AES encryption + SHA-256 hashing
+│   ├── DatabaseManager.java  # SQLite layer — all DB reads/writes
+│   └── EncryptionUtil.java   # AES/CBC encryption + SHA-256 hashing
 ├── data/
-│   └── passwords.dat         # Encrypted password storage (auto-created)
+│   └── vault.db              # SQLite database (auto-created, gitignored)
+├── sqlite-jdbc-3.51.2.0.jar  # SQLite JDBC driver
 └── README.md
 ```
 
@@ -35,12 +54,13 @@ password-manager/
 ## 🧰 Tech Stack
 
 | Technology | Usage |
-|---|---|
+| --- | --- |
 | Java 21 | Core language |
-| AES (javax.crypto) | Password encryption at rest |
+| Swing | GUI framework |
+| SQLite (via JDBC) | Local database persistence |
+| AES/CBC (javax.crypto) | Password encryption at rest |
 | SHA-256 (java.security) | Master password hashing |
-| BufferedReader / FileWriter | File persistence |
-| Base64 | Encoding encrypted bytes as readable strings |
+| Base64 | Encoding encrypted bytes |
 
 ---
 
@@ -48,65 +68,44 @@ password-manager/
 
 ### Prerequisites
 
-- Java 21 or higher
-- No external dependencies — pure Java standard library
+* Java 21 or higher
+* `sqlite-jdbc-3.51.2.0.jar` (included in repo)
 
 ### Clone the repository
 
 ```bash
-git clone https://github.com/chaukz/password-manager.git
-cd password-manager
+git clone https://github.com/chaukz/password-manager-extended.git
+cd password-manager-extended/src
 ```
 
 ### Compile
 
 ```bash
-cd src
-javac *.java
+javac -cp .:sqlite-jdbc-3.51.2.0.jar *.java
 ```
 
 ### Run
 
 ```bash
-java Main
+java -cp .:sqlite-jdbc-3.51.2.0.jar Main
 ```
+
+> On Windows replace `:` with `;`
 
 ---
 
 ## 🖥️ Usage
 
-```
-Enter master password: ••••••••
-Access granted!
-
-=== Password Manager ===
-1. Add Entry
-2. Delete Entry
-3. Search Entry
-4. List Entries
-5. Update Entry
-6. Exit
-Enter your choice:
-```
-
----
-
-## 🔑 Default Master Password
-
-```
-BoniSecretKey123
-```
-
-> ⚠️ To change it: hash your new password with `EncryptionUtil.hashPassword("yourPassword")` and replace the hash in `Main.java` → `MASTER_PASSWORD_HASH`
+On first launch you'll be prompted to set a master password. After that, the dashboard lets you add, update, delete, and search entries. Passwords are hidden by default — use the **Show Password** button to reveal them.
 
 ---
 
 ## 🔒 Security Notes
 
 | Concern | How it's handled |
-|---|---|
-| Master password | SHA-256 hashed — never stored in plain text |
-| Entry passwords | AES-128 encrypted before writing to disk |
+| --- | --- |
+| Master password | SHA-256 hashed, stored in SQLite — never plain text |
+| Entry passwords | AES/CBC encrypted with a unique random IV per entry |
 | Brute force | 3-attempt lockout on master password |
 | Empty fields | Rejected before any processing |
 
@@ -116,33 +115,35 @@ BoniSecretKey123
 
 ## 📚 Concepts Demonstrated
 
-- **OOP** — encapsulation, classes, getters/setters
-- **File I/O** — `BufferedReader`, `FileWriter`, try-with-resources
-- **Cryptography** — AES encryption, SHA-256 hashing, Base64 encoding
-- **Input validation** — `NumberFormatException`, empty field checks
-- **Data structures** — `ArrayList`, lambda expressions (`removeIf`)
-- **Separation of concerns** — each class has a single responsibility
+* **OOP** — encapsulation, classes, getters/setters
+* **Swing GUI** — JFrame, JTable, JDialog, custom renderers, dark theming
+* **SQLite / JDBC** — PreparedStatements, connection management, schema creation
+* **Cryptography** — AES/CBC encryption, SHA-256 hashing, random IV generation
+* **In-memory caching** — cache synced with DB to avoid stale reads
+* **Input validation** — empty field checks, duplicate prevention
+* **Separation of concerns** — each class has a single responsibility
 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] Terminal CRUD interface
-- [x] AES encryption at rest
-- [x] SHA-256 master password hashing
-- [x] Input validation
-- [x] Duplicate entry prevention
-- [ ] Swing GUI with dark mode
-- [ ] JavaFX migration
-- [ ] Password strength indicator
-- [ ] Password generator
+* [x] Terminal CRUD interface
+* [x] AES encryption at rest
+* [x] SHA-256 master password hashing
+* [x] Input validation + duplicate prevention
+* [x] Swing GUI with dark mode
+* [x] SQLite database persistence
+* [x] AES/CBC with random IV
+* [x] User-defined master password (first-run setup)
+* [ ] Password strength indicator
+* [ ] Password generator
+* [ ] JavaFX migration
 
 ---
 
 ## 👤 Author
 
-**Your Name**
-- GitHub: [@chaukz](https://github.com/chaukz)
+* GitHub: [@chaukz](https://github.com/chaukz)
 
 ---
 

@@ -1,9 +1,16 @@
 {
-    "cSpell.words": [
-        "Chauke",
-        "Segoe"
-    ],
-    "files.exclude": {
-        "**/*.class": true
-    }
+     "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Run Password Manager",
+            "request": "launch",
+            "mainClass": "Main",
+            "classPaths": [
+                "${workspaceFolder}/lib/sqlite-jdbc-3.51.2.0.jar",
+                "${workspaceFolder}/src"
+            ],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
 }
